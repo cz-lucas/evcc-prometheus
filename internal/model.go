@@ -44,7 +44,7 @@ type EVCCMessage struct {
 	TariffCo2Loadpoints   float64 `json:"tariffCo2Loadpoints"`
 
 	// Forecast
-	Forecast *Forecast `json:"forecast"`
+	//	Forecast *Forecast `json:"forecast"`
 
 	// Remote
 	Remote *Remote `json:"remote"`
