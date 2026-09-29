@@ -18,8 +18,12 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+
 	// Setup
-	logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger = slog.New(slog.NewTextHandler(os.Stdout, opts))
 	logger.Info("Starting evcc prometheus exporter")
 
 	messageChan := make(chan string, 8)

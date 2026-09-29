@@ -163,7 +163,6 @@ func decodeForecastSolar(rawValue json.RawMessage, target *ForecastSolar) error 
 	return decodeForecastPoints(timeSeries, &target.TimeSeries)
 }
 
-// decodeForecastPoints converts EVCC [start, end, value] tuples into typed points.
 func decodeForecastPoints(rawValue json.RawMessage, target *[]ForecastPoint) error {
 	var rawPoints [][]json.RawMessage
 	if err := json.Unmarshal(rawValue, &rawPoints); err != nil {
@@ -171,29 +170,42 @@ func decodeForecastPoints(rawValue json.RawMessage, target *[]ForecastPoint) err
 	}
 
 	points := make([]ForecastPoint, 0, len(rawPoints))
-	for pointIndex, rawPoint := range rawPoints {
-		if len(rawPoint) != 3 {
-			return fmt.Errorf("forecast point %d: expected 3 values, got %d", pointIndex, len(rawPoint))
+
+	for i, rawPoint := range rawPoints {
+
+		// Throw error if the forecast point does not have 2 or 3 values
+		if len(rawPoint) != 2 && len(rawPoint) != 3 {
+			return fmt.Errorf("forecast point %d: expected 2 or 3 values, got %d", i, len(rawPoint))
 		}
 
-		var startUnix, endUnix int64
-		var value float64
+		// Decode the start time from the first element of the forecast point array.
+		var startUnix int64
 		if err := json.Unmarshal(rawPoint[0], &startUnix); err != nil {
-			return fmt.Errorf("forecast point %d start: %w", pointIndex, err)
-		}
-		if err := json.Unmarshal(rawPoint[1], &endUnix); err != nil {
-			return fmt.Errorf("forecast point %d end: %w", pointIndex, err)
-		}
-		if err := json.Unmarshal(rawPoint[2], &value); err != nil {
-			return fmt.Errorf("forecast point %d value: %w", pointIndex, err)
+			return fmt.Errorf("forecast point %d start: %w", i, err)
 		}
 
-		// Forecast tuple timestamps are Unix seconds and are stored in UTC.
-		points = append(points, ForecastPoint{
+		// Decode the end time from the second element of the forecast point array if it exists.
+		var value float64
+		if err := json.Unmarshal(rawPoint[len(rawPoint)-1], &value); err != nil {
+			return fmt.Errorf("forecast point %d value: %w", i, err)
+		}
+
+		point := ForecastPoint{
 			Start: time.Unix(startUnix, 0).UTC(),
-			End:   time.Unix(endUnix, 0).UTC(),
 			Value: value,
-		})
+		}
+
+		// If the forecast point has 3 values, decode the end time from the second element of the array.
+		if len(rawPoint) == 3 {
+			var endUnix int64
+			if err := json.Unmarshal(rawPoint[1], &endUnix); err != nil {
+				return fmt.Errorf("forecast point %d end: %w", i, err)
+			}
+
+			point.End = time.Unix(endUnix, 0).UTC()
+		}
+
+		points = append(points, point)
 	}
 
 	*target = points
