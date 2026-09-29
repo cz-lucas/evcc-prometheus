@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func Connect(logger *slog.Logger, websocketUrl string) (*websocket.Conn, <-chan struct{}, error) {
+func Connect(logger *slog.Logger, messageChan chan string, websocketUrl string) (*websocket.Conn, <-chan struct{}, error) {
 	logger.Info("Connecting to websocket")
 
 	// Dial opens a WebSocket connection.
@@ -28,7 +28,7 @@ func Connect(logger *slog.Logger, websocketUrl string) (*websocket.Conn, <-chan 
 	readerDone := make(chan struct{})
 	go func() {
 		defer close(readerDone)
-		receiveMessages(logger, conn)
+		receiveMessages(logger, conn, messageChan)
 	}()
 
 	return conn, readerDone, nil
@@ -61,7 +61,7 @@ func Disconnect(logger *slog.Logger, conn *websocket.Conn, readerDone <-chan str
 	return err
 }
 
-func receiveMessages(logger *slog.Logger, conn *websocket.Conn) {
+func receiveMessages(logger *slog.Logger, conn *websocket.Conn, messageChan chan string) {
 	for {
 		// ReadMessage waits until the server sends us a message.
 		//
@@ -82,7 +82,8 @@ func receiveMessages(logger *slog.Logger, conn *websocket.Conn) {
 		}
 
 		if messageType == 1 {
-			logger.Info("Received message from EVCC",
+			messageChan <- string(message)
+			logger.Debug("Received message from EVCC",
 				"payload", message,
 			)
 		} else {

@@ -10,6 +10,7 @@ import (
 )
 
 var logger *slog.Logger
+var evccState evccprometheus.EVCCData
 
 func main() {
 
@@ -21,10 +22,13 @@ func main() {
 	logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 	logger.Info("Starting evcc prometheus exporter")
 
-	conn, readerDone, err := evccprometheus.Connect(logger, "wss://demo.evcc.io/ws")
+	messageChan := make(chan string, 8)
+	conn, readerDone, err := evccprometheus.Connect(logger, messageChan, "wss://demo.evcc.io/ws")
 	if err != nil {
 		return
 	}
+
+	go evccprometheus.MessageToState(logger, messageChan, &evccState)
 
 	<-signalChan
 
