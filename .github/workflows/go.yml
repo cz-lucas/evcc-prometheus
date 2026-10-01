@@ -1,0 +1,41 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Go
+
+on:
+  push:
+# Should run on all branches
+#    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  release:
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.27.1'
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      run: go test -v ./... -coverprofile=/tmp/coverage.out
+
+    - name: Create coverage report
+      run: go tool cover -html=/tmp/coverage.out -o /tmp/coverage.html
+
+    - name: Upload coverage report html
+      uses: actions/upload-artifact@v7
+      with:
+        name: coverage-report
+        path: /tmp/coverage.html
+        retention-days: 14
+          
