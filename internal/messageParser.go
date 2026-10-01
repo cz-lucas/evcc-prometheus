@@ -11,12 +11,23 @@ import (
 	"time"
 )
 
-// MessageToState reads websocket messages and applies each update to EVCC state.
-func MessageToState(logger *slog.Logger, websocketMessages <-chan string, evccData *EVCCData) {
+// MessageToState reads websocket messages, applies each update to EVCC state,
+// and publishes detached state snapshots for asynchronous consumers.
+func MessageToState(logger *slog.Logger, websocketMessages <-chan string, evccData *EVCCData, stateUpdates chan<- StateUpdate) {
 	for message := range websocketMessages {
 		logger.Debug("Received message from EVCC", "payload", message)
 		if err := mergeMessage(logger, message, evccData); err != nil {
 			logger.Warn("Failed to parse message from EVCC", "error", err)
+			continue
+		}
+		if stateUpdates != nil {
+			var snapshot *Battery
+			if evccData.Battery != nil {
+				battery := *evccData.Battery
+				battery.Devices = append([]BatteryDevice(nil), evccData.Battery.Devices...)
+				snapshot = &battery
+			}
+			stateUpdates <- StateUpdate{Battery: snapshot}
 		}
 		//fmt.Printf("%#v\n", evccData.Forecast)
 		//fmt.Printf("%#v\n", evccData.Loadpoints[0])

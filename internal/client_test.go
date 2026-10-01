@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// TestRunReconnectsAfterReadFailure verifies the client reconnects after a dropped socket.
 func TestRunReconnectsAfterReadFailure(t *testing.T) {
 	var connections atomic.Int32
 	upgrader := websocket.Upgrader{}
@@ -64,6 +65,7 @@ func TestRunReconnectsAfterReadFailure(t *testing.T) {
 	}
 }
 
+// TestRunRetriesAfterDialFailure verifies the client retries a failed initial connection.
 func TestRunRetriesAfterDialFailure(t *testing.T) {
 	var requests atomic.Int32
 	var acceptingConnections atomic.Bool
@@ -130,6 +132,7 @@ func TestRunRetriesAfterDialFailure(t *testing.T) {
 	}
 }
 
+// TestNextRetryDelay checks exponential delay growth and maximum-delay capping.
 func TestNextRetryDelay(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -151,6 +154,7 @@ func TestNextRetryDelay(t *testing.T) {
 	}
 }
 
+// TestWaitForRetryStopsOnCancellation verifies cancellation interrupts a pending retry.
 func TestWaitForRetryStopsOnCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan bool, 1)

@@ -17,12 +17,12 @@ const (
 	stableConnectionPeriod = time.Minute
 )
 
-// Run connects to EVCC and reconnects until ctx is canceled. It closes
-// messageChan when it exits.
+// Run connects to EVCC and reconnects until ctx is canceled, then closes messageChan.
 func Run(ctx context.Context, logger *slog.Logger, messageChan chan<- string, websocketURL string) {
 	runWithBackoff(ctx, logger, messageChan, websocketURL, initialRetryDelay, maximumRetryDelay)
 }
 
+// runWithBackoff maintains the WebSocket connection and increases retry delays after failures.
 func runWithBackoff(ctx context.Context, logger *slog.Logger, messageChan chan<- string, websocketURL string, initialDelay, maximumDelay time.Duration) {
 	defer close(messageChan)
 
@@ -68,6 +68,7 @@ func runWithBackoff(ctx context.Context, logger *slog.Logger, messageChan chan<-
 	}
 }
 
+// waitForRetry waits for a randomized retry delay or returns early when the context is canceled.
 func waitForRetry(ctx context.Context, delay time.Duration) bool {
 	actualDelay := delay / 2
 	actualDelay += time.Duration(rand.Float64() * float64(delay-actualDelay))
@@ -82,6 +83,7 @@ func waitForRetry(ctx context.Context, delay time.Duration) bool {
 	}
 }
 
+// nextRetryDelay doubles the retry delay without exceeding the configured maximum.
 func nextRetryDelay(delay, maximum time.Duration) time.Duration {
 	if delay >= maximum/2 {
 		return maximum
@@ -89,6 +91,7 @@ func nextRetryDelay(delay, maximum time.Duration) time.Duration {
 	return delay * 2
 }
 
+// receiveMessages forwards text frames until the connection closes or the context is canceled.
 func receiveMessages(ctx context.Context, logger *slog.Logger, conn *websocket.Conn, messageChan chan<- string) error {
 	for {
 		// ReadMessage waits until the server sends us a message.
