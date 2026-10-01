@@ -5,12 +5,11 @@ Exports selected [EVCC](https://evcc.io/) WebSocket state as Prometheus gauges. 
 ## Configuration
 
 | Environment variable | Default | Description |
-| --- | --- | --- |
-| `EVCC_WS_URL` | `wss://demo.evcc.io/ws` | EVCC WebSocket URL |
-| `EVCC_SOURCE_ID` | `default` | Stable label value identifying this EVCC source |
-| `PROMETHEUS_ADDR` | `:9070` | HTTP listen address; metrics are served at `/metrics` |
-
-Run one exporter process per EVCC source. The `source_id` label lets Prometheus distinguish sources when their metrics are combined.
+| -------------------- | ----------------------- | ----------------------------------------- |
+| `EVCC_WS_URL`        | `wss://demo.evcc.io/ws` | EVCC WebSocket URL |
+| `PROMETHEUS_ADDR`    | `:9070` | HTTP listen address; metrics are served at `/metrics` |
+| `LOG_LEVEL`          | `info` | Loglevel (Allowed values: `debug`, `info`, `warn`, `error`) |
+| `GO_METRICS_ENABLED` | `true` | Show go system metrics on `/metrics` |
 
 ## Architecture
 
@@ -59,3 +58,10 @@ All metrics are gauges. Every series includes `source_id` and its entity ID labe
 Meter IDs use EVCC's stable device `name`; a missing grid meter name uses `grid`. Charge point IDs use the configured loadpoint `name`, falling back to its WebSocket index until the name arrives. Vehicle metrics use the associated charge point ID because EVCC reports vehicle values on loadpoints; the mutable vehicle name is not a label.
 
 EVCC list updates replace that entity category: entities omitted from the new list stop being exported, while omitted fields on retained IDs preserve their previous values. A `null` field clears only that value; a `null` entity list clears the category. Vehicle metrics clear when the loadpoint disconnects or its vehicle name is cleared. A `loadpoints.<index>: null` update removes that charge point.
+
+# TODO
+- Round values
+- Add name/title and not only the ID
+- Build CI-Pipeline for Docker containers
+- Create homeassistant-addon
+- Add healthcheck endpoints

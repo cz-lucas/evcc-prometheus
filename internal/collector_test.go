@@ -16,7 +16,7 @@ func TestMetricsCollectorExportsEntitiesAndRemovesReplacedEntities(t *testing.T)
 		ChargePoints: map[string]ChargePointState{"0": {Name: Field[string]{Value: "garage-wallbox", Set: true}, Charging: Field[bool]{Value: true, Set: true}, VehicleSOC: Field[float64]{Value: 61, Set: true}}},
 	})
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(NewMetricsCollector(store, "garage"))
+	registry.MustRegister(NewMetricsCollector(store))
 	families, err := registry.Gather()
 	if err != nil {
 		t.Fatalf("Gather(): %v", err)
@@ -29,7 +29,7 @@ func TestMetricsCollectorExportsEntitiesAndRemovesReplacedEntities(t *testing.T)
 			for _, label := range metric.GetLabel() {
 				labels[label.GetName()] = label.GetValue()
 			}
-			key := labels["source_id"] + "/" + labels["pv_id"] + labels["battery_id"] + labels["grid_id"] + labels["chargepoint_id"] + labels["phase"]
+			key := labels["pv_id"] + labels["battery_id"] + labels["grid_id"] + labels["chargepoint_id"] + labels["phase"]
 			values[family.GetName()][key] = metric.GetGauge().GetValue()
 		}
 	}
@@ -37,9 +37,9 @@ func TestMetricsCollectorExportsEntitiesAndRemovesReplacedEntities(t *testing.T)
 		key  string
 		want float64
 	}{
-		"battery_soc": {"garage/home", 72.5}, "evcc_pv_power_watts": {"garage/roof", 1250},
-		"evcc_pv_power_watts_shed": {"garage/shed", 350}, "evcc_grid_current_amperes": {"garage/main2", 5},
-		"evcc_chargepoint_charging": {"garage/garage-wallbox", 1}, "evcc_vehicle_soc_percent": {"garage/garage-wallbox", 61},
+		"battery_soc": {"home", 72.5}, "evcc_pv_power_watts": {"roof", 1250},
+		"evcc_pv_power_watts_shed": {"shed", 350}, "evcc_grid_current_amperes": {"main2", 5},
+		"evcc_chargepoint_charging": {"garage-wallbox", 1}, "evcc_vehicle_soc_percent": {"garage-wallbox", 61},
 	} {
 		name := metric
 		if name == "evcc_pv_power_watts_shed" {

@@ -12,7 +12,6 @@ import (
 
 	evccprometheus "github.com/cz-lucas/evcc-prometheus/internal"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
 var logger *slog.Logger
@@ -20,25 +19,31 @@ var logger *slog.Logger
 // main wires EVCC message ingestion to the state store and starts the metrics endpoint.
 func main() {
 
+	// Read configuration from environment variables
+	websocketURL := envOrDefault("EVCC_WS_URL", "wss://demo.evcc.io/ws")
+	address := envOrDefault("PROMETHEUS_ADDR", ":9070")
+	logLevel := envOrDefault("LOG_LEVEL", "info")
+	goMetricsEnabled := envOrDefault("GO_METRICS_ENABLED", "true")
+
 	// Setup handler for graceful shutdown
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(signalChan)
-	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: parseLogLevel(logLevel)}))
 	logger.Info("Starting evcc prometheus exporter")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Read configuration from environment variables
-	sourceID := envOrDefault("EVCC_SOURCE_ID", "default")
-	websocketURL := envOrDefault("EVCC_WS_URL", "wss://demo.evcc.io/ws")
-	address := envOrDefault("PROMETHEUS_ADDR", ":9070")
 	store := evccprometheus.NewStateStore()
 	decoder := evccprometheus.NewDecoder()
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(evccprometheus.NewMetricsCollector(store, sourceID))
-	registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+
+	registry.MustRegister(evccprometheus.NewMetricsCollector(store))
+	// Register Go and process metrics if enabled
+	if goMetricsEnabled == "true" {
+		//registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	}
 	server := &http.Server{Addr: address, Handler: evccprometheus.PrometheusHandler(registry)}
 	serverDone := make(chan error, 1)
 	go func() { serverDone <- server.ListenAndServe() }()
@@ -49,7 +54,7 @@ func main() {
 		defer close(clientDone)
 		evccprometheus.Run(ctx, logger, messageChan, websocketURL)
 	}()
-	logger.Info("Prometheus endpoint ready", "addr", address, "source_id", sourceID)
+	logger.Info("Prometheus endpoint ready", "addr", address)
 
 	// This loop is the sole state writer; the collector reads snapshots during scrapes.
 	for {
@@ -83,6 +88,21 @@ shutdown:
 	defer shutdownCancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Warn("Failed to shut down Prometheus server cleanly", "error", err)
+	}
+}
+
+func parseLogLevel(logLevel string) slog.Level {
+	switch logLevel {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }
 
