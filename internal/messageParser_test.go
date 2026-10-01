@@ -252,7 +252,7 @@ func TestMessageToStateLogsParseFailuresWithContext(t *testing.T) {
 	messages <- `{"apiReady":"not-a-bool"}`
 	close(messages)
 
-	MessageToState(logger, messages, &EVCCData{}, nil)
+	MessageToState(logger, messages, &EVCCData{})
 
 	logOutput := output.String()
 	if !strings.Contains(logOutput, "level=WARN") {
@@ -266,21 +266,5 @@ func TestMessageToStateLogsParseFailuresWithContext(t *testing.T) {
 	}
 	if !strings.Contains(logOutput, "level=DEBUG") || !strings.Contains(logOutput, "Applying EVCC field update") {
 		t.Errorf("log output does not contain the field debug trace: %s", logOutput)
-	}
-}
-
-func TestMessageToStatePublishesBatterySnapshot(t *testing.T) {
-	messages := make(chan string, 1)
-	messages <- `{"battery":{"devices":[{"name":"home","soc":50}]}}`
-	close(messages)
-
-	updates := make(chan StateUpdate, 1)
-	state := EVCCData{}
-	MessageToState(slog.Default(), messages, &state, updates)
-
-	snapshot := <-updates
-	state.Battery.Devices[0].SOC = 99
-	if got := snapshot.Battery.Devices[0].SOC; got != 50 {
-		t.Errorf("published SOC changed with mutable state: got %v, want 50", got)
 	}
 }

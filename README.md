@@ -21,7 +21,7 @@ flowchart LR
     loop --> decoder[Decoder]
     decoder -->|typed updates| store[(State store)]
 
-    prometheus[Prometheus scraper] --> handler[/metrics handler]
+    prometheus[Prometheus scraper] --> handler[metrics handler]
     handler --> registry[Prometheus registry]
     registry --> collector[Metrics collector]
     collector -->|detached snapshot| store

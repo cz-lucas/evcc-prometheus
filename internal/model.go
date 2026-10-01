@@ -67,10 +67,6 @@ type EVCCData struct {
 	Ext          []any `json:"ext"`
 }
 
-type StateUpdate struct {
-	Battery *Battery
-}
-
 type Forecast struct {
 	CO2         []ForecastPoint `json:"co2"`
 	FeedIn      []ForecastPoint `json:"feedin"`
