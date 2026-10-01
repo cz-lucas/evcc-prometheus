@@ -1,67 +1,95 @@
 package evccprometheus
 
 import (
+	"context"
 	"errors"
 	"log/slog"
+	"math/rand"
 	"net"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-func Connect(logger *slog.Logger, messageChan chan string, websocketUrl string) (*websocket.Conn, <-chan struct{}, error) {
-	logger.Info("Connecting to websocket")
+const (
+	initialRetryDelay      = time.Second
+	maximumRetryDelay      = 30 * time.Second
+	stableConnectionPeriod = time.Minute
+)
 
-	// Dial opens a WebSocket connection.
-	// The first return value is the connection.
-	// The second return value is the HTTP response.
-	// The third return value is an error, if something went wrong.
-	conn, _, err := websocket.DefaultDialer.Dial(websocketUrl, nil)
-	if err != nil {
-		logger.Error("Could not connect:", "message", err)
-		return nil, nil, err
-	}
-
-	logger.Info("Connected")
-
-	// Keep reading messages forever.
-	readerDone := make(chan struct{})
-	go func() {
-		defer close(readerDone)
-		receiveMessages(logger, conn, messageChan)
-	}()
-
-	return conn, readerDone, nil
+// Run connects to EVCC and reconnects until ctx is canceled. It closes
+// messageChan when it exits.
+func Run(ctx context.Context, logger *slog.Logger, messageChan chan<- string, websocketURL string) {
+	runWithBackoff(ctx, logger, messageChan, websocketURL, initialRetryDelay, maximumRetryDelay)
 }
 
-func Disconnect(logger *slog.Logger, conn *websocket.Conn, readerDone <-chan struct{}) error {
-	logger.Info("Closing connection to EVCC")
-	deadline := time.Now().Add(time.Second)
-	closeMessage := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
-	if err := conn.WriteControl(websocket.CloseMessage, closeMessage, deadline); err != nil && !errors.Is(err, net.ErrClosed) {
-		logger.Warn("Failed to send close message to EVCC", "error", err)
-	}
+func runWithBackoff(ctx context.Context, logger *slog.Logger, messageChan chan<- string, websocketURL string, initialDelay, maximumDelay time.Duration) {
+	defer close(messageChan)
 
-	timer := time.NewTimer(time.Until(deadline))
+	retryDelay := initialDelay
+	for ctx.Err() == nil {
+		logger.Info("Connecting to websocket")
+		conn, _, err := websocket.DefaultDialer.DialContext(ctx, websocketURL, nil)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			logger.Warn("Could not connect to EVCC", "error", err, "retry_in", retryDelay)
+		} else {
+			logger.Info("Connected")
+			connectedAt := time.Now()
+			connectionDone := make(chan struct{})
+			go func() {
+				select {
+				case <-ctx.Done():
+					_ = conn.Close()
+				case <-connectionDone:
+				}
+			}()
+
+			err = receiveMessages(ctx, logger, conn, messageChan)
+			close(connectionDone)
+			_ = conn.Close()
+			if ctx.Err() != nil {
+				return
+			}
+			if err != nil {
+				logger.Warn("WebSocket connection to EVCC lost", "error", err, "retry_in", retryDelay)
+			}
+			if time.Since(connectedAt) >= stableConnectionPeriod {
+				retryDelay = initialDelay
+			}
+		}
+
+		if !waitForRetry(ctx, retryDelay) {
+			return
+		}
+		retryDelay = nextRetryDelay(retryDelay, maximumDelay)
+	}
+}
+
+func waitForRetry(ctx context.Context, delay time.Duration) bool {
+	actualDelay := delay / 2
+	actualDelay += time.Duration(rand.Float64() * float64(delay-actualDelay))
+	timer := time.NewTimer(actualDelay)
 	defer timer.Stop()
+
 	select {
-	case <-readerDone:
+	case <-ctx.Done():
+		return false
 	case <-timer.C:
-		logger.Warn("Timed out waiting for EVCC close response")
+		return true
 	}
-
-	err := conn.Close()
-
-	if err == nil {
-		logger.Info("Connection to EVCC closed")
-	} else {
-		logger.Warn("Failed to close connection to EVCC", "error", err)
-	}
-
-	return err
 }
 
-func receiveMessages(logger *slog.Logger, conn *websocket.Conn, messageChan chan string) {
+func nextRetryDelay(delay, maximum time.Duration) time.Duration {
+	if delay >= maximum/2 {
+		return maximum
+	}
+	return delay * 2
+}
+
+func receiveMessages(ctx context.Context, logger *slog.Logger, conn *websocket.Conn, messageChan chan<- string) error {
 	for {
 		// ReadMessage waits until the server sends us a message.
 		//
@@ -70,19 +98,23 @@ func receiveMessages(logger *slog.Logger, conn *websocket.Conn, messageChan chan
 		// message contains the actual data.
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
-			if !errors.Is(err, net.ErrClosed) && !websocket.IsCloseError(
+			if errors.Is(err, net.ErrClosed) || websocket.IsCloseError(
 				err,
 				websocket.CloseNormalClosure,
 				websocket.CloseGoingAway,
 				websocket.CloseNoStatusReceived,
 			) {
-				logger.Warn("Read error:", "message", err)
+				return nil
 			}
-			return
+			return err
 		}
 
-		if messageType == 1 {
-			messageChan <- string(message)
+		if messageType == websocket.TextMessage {
+			select {
+			case messageChan <- string(message):
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 			logger.Debug("Received message from EVCC",
 				"payload", message,
 			)

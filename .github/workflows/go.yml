@@ -16,12 +16,10 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.27.1'
+      uses: actions/setup-go@v7
 
     - name: Build
       run:  go build -o evcc-prometheus ./cmd

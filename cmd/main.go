@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -17,6 +18,7 @@ func main() {
 	// Setup handler for graceful shutdown
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(signalChan)
 
 	opts := &slog.HandlerOptions{
 		Level: slog.LevelDebug,
@@ -26,19 +28,26 @@ func main() {
 	logger = slog.New(slog.NewTextHandler(os.Stdout, opts))
 	logger.Info("Starting evcc prometheus exporter")
 
-	messageChan := make(chan string, 8)
-	conn, readerDone, err := evccprometheus.Connect(logger, messageChan, "wss://demo.evcc.io/ws")
-	if err != nil {
-		return
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	go evccprometheus.MessageToState(logger, messageChan, &evccState)
+	messageChan := make(chan string, 16)
+	clientDone := make(chan struct{})
+	go func() {
+		defer close(clientDone)
+		evccprometheus.Run(ctx, logger, messageChan, "wss://demo.evcc.io/ws")
+	}()
+	messageProcessorDone := make(chan struct{})
+	go func() {
+		defer close(messageProcessorDone)
+		evccprometheus.MessageToState(logger, messageChan, &evccState)
+	}()
 
 	<-signalChan
 
 	// Teardown / Shutdown
 	logger.Info("Received termination signal, shutting down...")
-	if err := evccprometheus.Disconnect(logger, conn, readerDone); err != nil {
-		logger.Error("Failed to disconnect from EVCC", "error", err)
-	}
+	cancel()
+	<-clientDone
+	<-messageProcessorDone
 }
