@@ -1,11 +1,9 @@
 package evccprometheus
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type MetricsCollector struct {
@@ -112,11 +110,4 @@ func collectBool(ch chan<- prometheus.Metric, desc *prometheus.Desc, value Field
 		number = 1
 	}
 	ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, number, labels...)
-}
-
-// PrometheusHandler serves the supplied registry from a private /metrics-only mux.
-func PrometheusHandler(registry *prometheus.Registry) http.Handler {
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
-	return mux
 }

@@ -34,8 +34,10 @@ func runWithBackoff(ctx context.Context, logger *slog.Logger, messageChan chan<-
 			if ctx.Err() != nil {
 				return
 			}
+			appReady = false
 			logger.Warn("Could not connect to EVCC", "error", err, "retry_in", retryDelay)
 		} else {
+			appReady = true
 			logger.Info("Connected")
 			connectedAt := time.Now()
 			connectionDone := make(chan struct{})
@@ -49,12 +51,14 @@ func runWithBackoff(ctx context.Context, logger *slog.Logger, messageChan chan<-
 
 			err = receiveMessages(ctx, logger, conn, messageChan)
 			close(connectionDone)
+			appReady = false
 			_ = conn.Close()
 			if ctx.Err() != nil {
 				return
 			}
 			if err != nil {
 				logger.Warn("WebSocket connection to EVCC lost", "error", err, "retry_in", retryDelay)
+				appReady = false
 			}
 			if time.Since(connectedAt) >= stableConnectionPeriod {
 				retryDelay = initialDelay
@@ -109,6 +113,7 @@ func receiveMessages(ctx context.Context, logger *slog.Logger, conn *websocket.C
 			) {
 				return nil
 			}
+			appReady = false
 			return err
 		}
 
@@ -127,5 +132,6 @@ func receiveMessages(ctx context.Context, logger *slog.Logger, conn *websocket.C
 				"payload", message,
 			)
 		}
+		appReady = true
 	}
 }

@@ -63,7 +63,6 @@ EVCC list updates replace that entity category: entities omitted from the new li
 - Add name/title and not only the ID
 - Build CI-Pipeline for Docker containers
 - Create homeassistant-addon
-- Add healthcheck endpoints
 - Add metrics like CO2 and electricity price
 - Add support for heatpumps
 - Write E2E test with real EVCC instance in demo mode (maybe)
