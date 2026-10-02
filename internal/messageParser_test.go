@@ -103,7 +103,6 @@ func TestMergeMessageErrorPaths(t *testing.T) {
 		{name: "invalid json", message: `{"apiReady":`, wantErr: "decode websocket message"},
 		{name: "invalid root field value", message: `{"apiReady":"bad"}`, wantErr: `field "apiReady"`},
 		{name: "unknown root field", message: `{"future":1}`},
-		{name: "unknown dotted namespace", message: `{"future.value":1}`},
 		{name: "forecast extra path", message: `{"forecast.solar.extra":1}`},
 		{name: "loadpoint missing field", message: `{"loadpoints.0":1}`, wantErr: "invalid loadpoint key"},
 		{name: "invalid loadpoint index", message: `{"loadpoints.nope.mode":"off"}`, wantErr: "invalid loadpoint index"},

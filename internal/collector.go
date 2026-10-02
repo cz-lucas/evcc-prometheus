@@ -55,22 +55,22 @@ func (c *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
 	// Each scrape uses one consistent snapshot; absent and removed values emit no series.
 	snapshot := c.state.Snapshot()
 	for id, value := range snapshot.Batteries {
-		collectFloat(ch, c.descriptors.batterySOC, value.SOC, id)
+		collectFloat(ch, c.descriptors.batterySOC, value.SOC, 1, id)
 	}
 	for id, value := range snapshot.PVSystems {
-		collectFloat(ch, c.descriptors.pvPower, value.Power, id)
-		collectFloat(ch, c.descriptors.pvEnergy, value.Energy, id)
+		collectFloat(ch, c.descriptors.pvPower, value.Power, 0, id)
+		collectFloat(ch, c.descriptors.pvEnergy, value.Energy, 2, id)
 	}
 	for id, value := range snapshot.Consumers {
-		collectFloat(ch, c.descriptors.consumerPower, value.Power, id)
-		collectFloat(ch, c.descriptors.consumerEnergy, value.Energy, id)
+		collectFloat(ch, c.descriptors.consumerPower, value.Power, 0, id)
+		collectFloat(ch, c.descriptors.consumerEnergy, value.Energy, 2, id)
 	}
 	for id, value := range snapshot.GridMeters {
-		collectFloat(ch, c.descriptors.gridPower, value.Power, id)
-		collectFloat(ch, c.descriptors.gridEnergy, value.Energy, id)
+		collectFloat(ch, c.descriptors.gridPower, value.Power, 0, id)
+		collectFloat(ch, c.descriptors.gridEnergy, value.Energy, 2, id)
 		if value.Currents.Set && !value.Currents.Null {
 			for phase, current := range value.Currents.Value {
-				ch <- prometheus.MustNewConstMetric(c.descriptors.gridCurrent, prometheus.GaugeValue, current, id, strconv.Itoa(phase+1))
+				ch <- prometheus.MustNewConstMetric(c.descriptors.gridCurrent, prometheus.GaugeValue, roundFloat(current, 3), id, strconv.Itoa(phase+1))
 			}
 		}
 	}
@@ -81,11 +81,11 @@ func (c *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 		collectBool(ch, c.descriptors.chargePointCharging, point.Charging, entityID)
 		collectBool(ch, c.descriptors.chargePointConnected, point.Connected, entityID)
-		collectFloat(ch, c.descriptors.chargePointPower, point.Power, entityID)
-		collectFloat(ch, c.descriptors.chargePointEnergy, point.ChargedEnergy, entityID)
-		collectFloat(ch, c.descriptors.vehicleSOC, point.VehicleSOC, entityID)
-		collectFloat(ch, c.descriptors.vehicleRange, point.VehicleRange, entityID)
-		collectFloat(ch, c.descriptors.vehicleOdometer, point.VehicleOdometer, entityID)
+		collectFloat(ch, c.descriptors.chargePointPower, point.Power, 0, entityID)
+		collectFloat(ch, c.descriptors.chargePointEnergy, point.ChargedEnergy, 2, entityID)
+		collectFloat(ch, c.descriptors.vehicleSOC, point.VehicleSOC, 1, entityID)
+		collectFloat(ch, c.descriptors.vehicleRange, point.VehicleRange, 0, entityID)
+		collectFloat(ch, c.descriptors.vehicleOdometer, point.VehicleOdometer, 0, entityID)
 	}
 }
 
@@ -96,9 +96,9 @@ func (c *MetricsCollector) descriptorList() []*prometheus.Desc {
 }
 
 // collectFloat emits a gauge when its field is present and non-null.
-func collectFloat(ch chan<- prometheus.Metric, desc *prometheus.Desc, value Field[float64], labels ...string) {
+func collectFloat(ch chan<- prometheus.Metric, desc *prometheus.Desc, value Field[float64], precision uint, labels ...string) {
 	if value.Set && !value.Null {
-		ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, value.Value, labels...)
+		ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, roundFloat(value.Value, precision), labels...)
 	}
 }
 
