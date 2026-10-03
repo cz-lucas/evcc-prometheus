@@ -60,7 +60,6 @@ Meter IDs use EVCC's stable device `name`; a missing grid meter name uses `grid`
 EVCC list updates replace that entity category: entities omitted from the new list stop being exported, while omitted fields on retained IDs preserve their previous values. A `null` field clears only that value; a `null` entity list clears the category. Vehicle metrics clear when the loadpoint disconnects or its vehicle name is cleared. A `loadpoints.<index>: null` update removes that charge point.
 
 # TODO
-- Add name/title and not only the ID
 - Build CI-Pipeline for Docker containers
 - Create homeassistant-addon
 - Add metrics like CO2 and electricity price

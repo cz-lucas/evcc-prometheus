@@ -65,7 +65,11 @@ func decodeBatteries(raw json.RawMessage, update *StateUpdate) error {
 	update.Batteries = make(map[string]BatteryState)
 	return decodeEntityList(devices, func(fields map[string]json.RawMessage, id string) (string, BatteryState, error) {
 		soc, err := decodeNumber(fields, "soc")
-		return id, BatteryState{SOC: soc}, err
+		if err != nil {
+			return "", BatteryState{}, err
+		}
+		title, err := decodeString(fields, "title")
+		return id, BatteryState{Name: title, SOC: soc}, err
 	}, &update.Batteries)
 }
 
@@ -79,7 +83,11 @@ func decodePVSystems(raw json.RawMessage, update *StateUpdate) error {
 			return "", PVState{}, err
 		}
 		energy, err := decodeNumber(fields, "energy")
-		return id, PVState{Power: power, Energy: energy}, err
+		if err != nil {
+			return "", PVState{}, err
+		}
+		title, err := decodeString(fields, "title")
+		return id, PVState{Name: title, Power: power, Energy: energy}, err
 	}, &update.PVSystems)
 }
 
@@ -93,7 +101,11 @@ func decodeConsumers(raw json.RawMessage, update *StateUpdate) error {
 			return "", ConsumerState{}, err
 		}
 		energy, err := decodeNumber(fields, "energy")
-		return id, ConsumerState{Power: power, Energy: energy}, err
+		if err != nil {
+			return "", ConsumerState{}, err
+		}
+		title, err := decodeString(fields, "title")
+		return id, ConsumerState{Name: title, Power: power, Energy: energy}, err
 	}, &update.Consumers)
 }
 
@@ -129,7 +141,11 @@ func decodeGrid(raw json.RawMessage, update *StateUpdate) error {
 	if err != nil {
 		return err
 	}
-	update.GridMeters[id] = GridState{Power: power, Energy: energy, Currents: currents}
+	title, err := decodeString(fields, "title")
+	if err != nil {
+		return err
+	}
+	update.GridMeters[id] = GridState{Name: title, Power: power, Energy: energy, Currents: currents}
 	return nil
 }
 
@@ -226,6 +242,14 @@ func decodeNumber(fields map[string]json.RawMessage, key string) (Field[float64]
 		return Field[float64]{}, nil
 	}
 	return decodeValue[float64](raw)
+}
+
+func decodeString(fields map[string]json.RawMessage, key string) (Field[string], error) {
+	raw, ok := fields[key]
+	if !ok {
+		return Field[string]{}, nil
+	}
+	return decodeValue[string](raw)
 }
 
 // decodeNumberSlice decodes an optional numeric slice while preserving null and omission.

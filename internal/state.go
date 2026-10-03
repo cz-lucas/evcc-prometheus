@@ -8,16 +8,22 @@ type Field[T any] struct {
 	Null  bool
 }
 
-type BatteryState struct{ SOC Field[float64] }
+type BatteryState struct {
+	Name Field[string]
+	SOC  Field[float64]
+}
 type PVState struct {
+	Name   Field[string]
 	Power  Field[float64]
 	Energy Field[float64]
 }
 type ConsumerState struct {
+	Name   Field[string]
 	Power  Field[float64]
 	Energy Field[float64]
 }
 type GridState struct {
+	Name     Field[string]
 	Power    Field[float64]
 	Energy   Field[float64]
 	Currents Field[[]float64]

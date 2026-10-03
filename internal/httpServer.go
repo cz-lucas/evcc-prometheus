@@ -43,10 +43,17 @@ func HandlerAppReady(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func HandleRoot(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("EVCC Prometheus Exporter (https://github.com/cz-lucas/evcc-prometheus) \n" +
+		"Routes:\n/metrics\n/health\n/ready\n"))
+}
+
 func StartHttpServer(reg *prometheus.Registry) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/health", HandlerHealthCheck)
 	mux.HandleFunc("/ready", HandlerAppReady)
+	mux.HandleFunc("/", HandleRoot)
 	return mux
 }
