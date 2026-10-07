@@ -26,18 +26,18 @@ func main() {
 	logLevel := evccprometheus.EnvOrDefault("LOG_LEVEL", "info")
 	goMetricsEnabled := evccprometheus.EnvOrDefault("GO_METRICS_ENABLED", "true")
 
-	// Validate WebSocket URL
-	if !evccprometheus.UrlValidator(websocketURL) {
-		logger.Error("Invalid WebSocket URL", "url", websocketURL)
-		return
-	}
-
 	// Setup handler for graceful shutdown
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(signalChan)
 	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: evccprometheus.ParseLogLevel(logLevel)}))
 	logger.Info("Starting evcc prometheus exporter")
+
+	// Validate WebSocket URL
+	if !evccprometheus.UrlValidator(websocketURL) {
+		logger.Error("Invalid WebSocket URL", "url", websocketURL)
+		return
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
