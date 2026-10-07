@@ -11,6 +11,8 @@ Exports selected [EVCC](https://evcc.io/) WebSocket state as Prometheus gauges. 
 | `LOG_LEVEL`          | `info` | Loglevel (Allowed values: `debug`, `info`, `warn`, `error`) |
 | `GO_METRICS_ENABLED` | `true` | Show go system metrics on `/metrics` |
 
+> NOTE: When you change the port using the env-variable you need to also update the healthchck for the docker-container.  
+> It's recommended to do port mapping using the ports-attribute in docker.
 ## Architecture
 
 ```mermaid
@@ -60,8 +62,13 @@ Meter IDs use EVCC's stable device `name`; a missing grid meter name uses `grid`
 EVCC list updates replace that entity category: entities omitted from the new list stop being exported, while omitted fields on retained IDs preserve their previous values. A `null` field clears only that value; a `null` entity list clears the category. Vehicle metrics clear when the loadpoint disconnects or its vehicle name is cleared. A `loadpoints.<index>: null` update removes that charge point.
 
 # TODO
-- Build CI-Pipeline for Docker containers
+## Important
 - Create homeassistant-addon
 - Add metrics like CO2 and electricity price
+- Extend pipeline for github-releases
+
+## Not so important
 - Add support for heatpumps
 - Write E2E test with real EVCC instance in demo mode (maybe)
+- Add docker compose file
+- Extend README
