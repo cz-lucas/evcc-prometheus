@@ -1,8 +1,8 @@
 package evccprometheus
 
 import (
+	"log/slog"
 	"math"
-    "log/slog"
 	"os"
 )
 
@@ -32,4 +32,15 @@ func EnvOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+/*
+* Validated that the URL starts with ws:// or wss:// and ends with /ws
+* I've implemented it without regex because I don't like using more dependencies for such a simple task.
+ */
+func UrlValidator(url string) bool {
+	if (len(url) >= 5 && (url[:5] == "ws://" || url[:6] == "wss://")) && len(url) >= 3 && url[len(url)-3:] == "/ws" {
+		return true
+	}
+	return false
 }
