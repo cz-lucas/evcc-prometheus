@@ -106,3 +106,50 @@ func TestEnvOrDefault(t *testing.T) {
 		}
 	})
 }
+
+func TestUrlValidator(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "valid ws URL",
+			input:    "ws://example.com/ws",
+			expected: true,
+		},
+		{
+			name:     "valid wss URL",
+			input:    "wss://example.com/ws",
+			expected: true,
+		},
+		{
+			name:     "invalid URL missing ws",
+			input:    "ws://example.com",
+			expected: false,
+		},
+		{
+			name:     "invalid URL wrong scheme",
+			input:    "http://example.com/ws",
+			expected: false,
+		},
+		{
+			name:     "invalid URL empty",
+			input:    "",
+			expected: false,
+		},
+		{
+			name:     "invalid URL missing scheme",
+			input:    "example.com/ws",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := UrlValidator(tt.input); got != tt.expected {
+				t.Errorf("UrlValidator(%q) = %v, want %v", tt.input, got, tt.expected)
+			}
+		})
+	}
+}

@@ -11,6 +11,8 @@ Exports selected [EVCC](https://evcc.io/) WebSocket state as Prometheus gauges. 
 | `LOG_LEVEL`          | `info` | Loglevel (Allowed values: `debug`, `info`, `warn`, `error`) |
 | `GO_METRICS_ENABLED` | `true` | Show go system metrics on `/metrics` |
 
+The `ws://` or `wss://` at the beginning and the `/ws` at the end of the EVCC-URL is required.
+
 > NOTE: When you change the port using the env-variable you need to also update the healthchck for the docker-container.  
 > It's recommended to do port mapping using the ports-attribute in docker.
 ## Architecture
