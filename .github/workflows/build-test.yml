@@ -1,14 +1,15 @@
 # This workflow will build a golang project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-name: Go
+name: Build and Test
 
 on:
+  workflow_call:
   push:
-# Should run on all branches
-#    branches: [ "main" ]
+    branches-ignore:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   release:
   workflow_dispatch:
 
@@ -22,21 +23,36 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v7
       with:
-        go-version: '1.27.1'
+        go-version-file: go.mod
 
+    - name: Format
+      run:  go fmt ./...
+
+    - name: Lint
+      run:  go vet ./...
+      
     - name: Build
-      run:  go build -o evcc-prometheus ./cmd
+      run:  go build -race -o evcc-prometheus ./cmd
 
     - name: Test
       run: go test -v ./... -coverprofile=/tmp/coverage.out
 
+    - name: Test (race)
+      run: go test -race -v ./... -coverprofile=/tmp/coverage-race.out
+      
     - name: Create coverage report
       run: go tool cover -html=/tmp/coverage.out -o /tmp/coverage.html
+
+    - name: Create coverage report (race)
+      run: go tool cover -html=/tmp/coverage-race.out -o /tmp/coverage-race.html
 
     - name: Upload coverage report html
       uses: actions/upload-artifact@v7
       with:
         name: coverage-report
-        path: /tmp/coverage.html
+        path: |
+          /tmp/coverage.html
+          /tmp/coverage-race.html
         retention-days: 14
+
           

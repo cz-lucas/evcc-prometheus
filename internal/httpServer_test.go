@@ -64,16 +64,17 @@ func TestRootEndpoint(t *testing.T) {
 
 func TestReadyEndpoint(t *testing.T) {
 	tests := []struct {
-		name          string
-		appReady      bool
-		expectedValue string
+		name               string
+		appReady           bool
+		expectedValue      string
+		expectedStatusCode int
 	}{
-		{name: "Not ready", appReady: false, expectedValue: `Not ready`},
-		{name: "Ready", appReady: true, expectedValue: `Ready`},
+		{name: "Not ready", appReady: false, expectedValue: `Not ready`, expectedStatusCode: http.StatusServiceUnavailable},
+		{name: "Ready", appReady: true, expectedValue: `Ready`, expectedStatusCode: http.StatusOK},
 	}
 
-	previousReady := appReady
-	t.Cleanup(func() { appReady = previousReady })
+	previousReady := appReady.Load()
+	t.Cleanup(func() { appReady.Store(previousReady) })
 
 	store := NewStateStore()
 	registry := prometheus.NewRegistry()
@@ -82,13 +83,13 @@ func TestReadyEndpoint(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			appReady = test.appReady
+			appReady.Store(test.appReady)
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodGet, "/ready", nil)
 			handler.ServeHTTP(recorder, request)
 
-			if recorder.Code != http.StatusOK {
-				t.Fatalf("GET /ready status = %d, want %d", recorder.Code, http.StatusOK)
+			if recorder.Code != test.expectedStatusCode {
+				t.Fatalf("GET /ready status = %d, want %d", recorder.Code, test.expectedStatusCode)
 			}
 
 			if recorder.Body.String() != test.expectedValue {
