@@ -6,7 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// TestMetricsCollectorExportsEntitiesAndRemovesReplacedEntities checks samples, labels, and list reconciliation.
+// TestMetricsCollectorExportsRoundedMetricsAndRemovesReplacedEntities checks rounded samples, labels, and list reconciliation.
 func TestMetricsCollectorExportsRoundedMetricsAndRemovesReplacedEntities(t *testing.T) {
 	store := NewStateStore()
 	store.Apply(StateUpdate{
@@ -46,7 +46,7 @@ func TestMetricsCollectorExportsRoundedMetricsAndRemovesReplacedEntities(t *test
 		key  string
 		want float64
 	}{
-		"battery_soc": {"home", 72.6}, "evcc_pv_power_watts": {"roof", 1251},
+		"evcc_battery_soc": {"home", 72.6}, "evcc_pv_power_watts": {"roof", 1251},
 		"evcc_pv_power_watts_shed": {"shed", 350}, "evcc_pv_energy_kwh": {"roof", 2.35},
 		"evcc_consumer_power_watts": {"water", 401}, "evcc_consumer_energy_kwh": {"water", 1.24},
 		"evcc_grid_power_watts": {"main", -121}, "evcc_grid_energy_kwh": {"main", 4.57},
