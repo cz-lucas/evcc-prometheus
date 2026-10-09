@@ -3,13 +3,14 @@ package evccprometheus
 import (
 	"log/slog"
 	"net/http"
+	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var appReady = false
+var appReady atomic.Bool
 
 func StartPrometheusServer(logger *slog.Logger, addr string, reg *prometheus.Registry, includeCollectors bool) (*http.Server, <-chan error) {
 	if includeCollectors {
@@ -34,11 +35,11 @@ func HandlerHealthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandlerAppReady(w http.ResponseWriter, r *http.Request) {
-	if appReady {
+	if appReady.Load() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Ready"))
 	} else {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte("Not ready"))
 	}
 }

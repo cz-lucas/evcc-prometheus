@@ -1,7 +1,7 @@
-FROM alpine:latest
+FROM alpine:3.24
 
 LABEL    org.opencontainers.image.source="https://github.com/cz-lucas/evcc-prometheus"
-LABEL    org.opencontainers.image.licenses="MIT"
+LABEL    org.opencontainers.image.licenses="Apache-2.0"
 LABEL    org.opencontainers.image.title="evcc-prometheus"
 LABEL    org.opencontainers.image.description="Prometheus exporter for evcc"
 
