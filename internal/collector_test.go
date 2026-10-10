@@ -25,7 +25,7 @@ func TestMetricsCollectorExportsRoundedMetricsAndRemovesReplacedEntities(t *test
 		}},
 	})
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(NewMetricsCollector(store))
+	registry.MustRegister(NewMetricsCollector(store, "ws://localhost/ws"))
 	families, err := registry.Gather()
 	if err != nil {
 		t.Fatalf("Gather(): %v", err)
@@ -72,5 +72,35 @@ func TestMetricsCollectorExportsRoundedMetricsAndRemovesReplacedEntities(t *test
 		if family.GetName() == "evcc_pv_power_watts" {
 			t.Fatalf("removed PV still exported: %v", family)
 		}
+	}
+}
+
+func TestMetricsCollectorExportsEVCCReadiness(t *testing.T) {
+	previousReady := appReady.Load()
+	t.Cleanup(func() { appReady.Store(previousReady) })
+
+	store := NewStateStore()
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(NewMetricsCollector(store, "ws://localhost/ws"))
+
+	for _, test := range []struct {
+		ready bool
+		want  float64
+	}{{ready: false, want: 0}, {ready: true, want: 1}} {
+		appReady.Store(test.ready)
+		families, err := registry.Gather()
+		if err != nil {
+			t.Fatalf("Gather(): %v", err)
+		}
+		for _, family := range families {
+			if family.GetName() == "evcc_connected" {
+				if got := family.GetMetric()[0].GetGauge().GetValue(); got != test.want {
+					t.Errorf("evcc_connected = %v, want %v", got, test.want)
+				}
+				goto found
+			}
+		}
+		t.Fatal("evcc_connected metric not found")
+	found:
 	}
 }

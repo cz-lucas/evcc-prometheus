@@ -45,7 +45,7 @@ func main() {
 	store := evccprometheus.NewStateStore()
 	decoder := evccprometheus.NewDecoder()
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(evccprometheus.NewMetricsCollector(store))
+	registry.MustRegister(evccprometheus.NewMetricsCollector(store, websocketURL))
 
 	includeGoMetrics, err := strconv.ParseBool(goMetricsEnabled)
 	if err != nil {
