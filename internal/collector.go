@@ -8,6 +8,7 @@ import (
 
 type MetricsCollector struct {
 	state       StateReader
+	evccURL     string
 	descriptors metricDescriptors
 }
 type metricDescriptors struct {
@@ -15,29 +16,33 @@ type metricDescriptors struct {
 	gridPower, gridEnergy, gridCurrent                                             *prometheus.Desc
 	chargePointCharging, chargePointConnected, chargePointPower, chargePointEnergy *prometheus.Desc
 	vehicleSOC, vehicleRange, vehicleOdometer                                      *prometheus.Desc
+	evccConnected                                                                  *prometheus.Desc
 }
 
 // NewMetricsCollector creates descriptors and binds collection to a state reader and source ID.
-func NewMetricsCollector(state StateReader) *MetricsCollector {
-	entity := func(name, help, label1, label2 string) *prometheus.Desc {
-		return prometheus.NewDesc("evcc_"+name, help, []string{label1, label2}, nil)
+func NewMetricsCollector(state StateReader, evccURL string) *MetricsCollector {
+	entity := func(name, help, label1, label2 string, labels ...string) *prometheus.Desc {
+		allLabels := []string{label1, label2}
+		allLabels = append(allLabels, labels...)
+		return prometheus.NewDesc(name, help, allLabels, nil)
 	}
-	return &MetricsCollector{state: state, descriptors: metricDescriptors{
-		batterySOC:           prometheus.NewDesc("battery_soc", "Battery state of charge in percent.", []string{"battery_id", "name"}, nil),
-		pvPower:              entity("pv_power_watts", "PV system power in watts.", "pv_id", "name"),
-		pvEnergy:             entity("pv_energy_kwh", "PV system energy in kilowatt-hours.", "pv_id", "name"),
-		consumerPower:        entity("consumer_power_watts", "Consumer power in watts.", "consumer_id", "name"),
-		consumerEnergy:       entity("consumer_energy_kwh", "Consumer energy in kilowatt-hours.", "consumer_id", "name"),
-		gridPower:            entity("grid_power_watts", "Grid meter power in watts.", "grid_id", "name"),
-		gridEnergy:           entity("grid_energy_kwh", "Grid meter energy in kilowatt-hours.", "grid_id", "name"),
-		gridCurrent:          prometheus.NewDesc("evcc_grid_current_amperes", "Grid current in amperes.", []string{"grid_id", "phase", "name"}, nil),
-		chargePointCharging:  entity("chargepoint_charging", "Whether a charge point is charging, as 0 or 1.", "chargepoint_id", "name"),
-		chargePointConnected: entity("chargepoint_connected", "Whether a vehicle is connected to a charge point, as 0 or 1.", "chargepoint_id", "name"),
-		chargePointPower:     entity("chargepoint_power_watts", "Charge point power in watts.", "chargepoint_id", "name"),
-		chargePointEnergy:    entity("chargepoint_charged_energy_kwh", "Energy charged by a charge point in kilowatt-hours.", "chargepoint_id", "name"),
-		vehicleSOC:           entity("vehicle_soc_percent", "Vehicle state of charge in percent, associated with a loadpoint.", "chargepoint_id", "name"),
-		vehicleRange:         entity("vehicle_range_kilometers", "Vehicle range in kilometers, associated with a loadpoint.", "chargepoint_id", "name"),
-		vehicleOdometer:      entity("vehicle_odometer_kilometers", "Vehicle odometer in kilometers, associated with a loadpoint.", "chargepoint_id", "name"),
+	return &MetricsCollector{state: state, evccURL: evccURL, descriptors: metricDescriptors{
+		batterySOC:           entity("evcc_battery_soc", "Battery state of charge in percent.", "battery_id", "name"),
+		pvPower:              entity("evcc_pv_power_watts", "PV system power in watts.", "pv_id", "name"),
+		pvEnergy:             entity("evcc_pv_energy_kwh", "PV system energy in kilowatt-hours.", "pv_id", "name"),
+		consumerPower:        entity("evcc_consumer_power_watts", "Consumer power in watts.", "consumer_id", "name"),
+		consumerEnergy:       entity("evcc_consumer_energy_kwh", "Consumer energy in kilowatt-hours.", "consumer_id", "name"),
+		gridPower:            entity("evcc_grid_power_watts", "Grid meter power in watts.", "grid_id", "name"),
+		gridEnergy:           entity("evcc_grid_energy_kwh", "Grid meter energy in kilowatt-hours.", "grid_id", "name"),
+		gridCurrent:          entity("evcc_grid_current_amperes", "Grid current in amperes.", "grid_id", "phase", "name"),
+		chargePointCharging:  entity("evcc_chargepoint_charging", "Whether a charge point is charging, as 0 or 1.", "chargepoint_id", "name"),
+		chargePointConnected: entity("evcc_chargepoint_connected", "Whether a vehicle is connected to a charge point, as 0 or 1.", "chargepoint_id", "name"),
+		chargePointPower:     entity("evcc_chargepoint_power_watts", "Charge point power in watts.", "chargepoint_id", "name"),
+		chargePointEnergy:    entity("evcc_chargepoint_charged_energy_kwh", "Energy charged by a charge point in kilowatt-hours.", "chargepoint_id", "name"),
+		vehicleSOC:           entity("evcc_vehicle_soc_percent", "Vehicle state of charge in percent, associated with a loadpoint.", "chargepoint_id", "name"),
+		vehicleRange:         entity("evcc_vehicle_range_kilometers", "Vehicle range in kilometers, associated with a loadpoint.", "chargepoint_id", "name"),
+		vehicleOdometer:      entity("evcc_vehicle_odometer_kilometers", "Vehicle odometer in kilometers, associated with a loadpoint.", "chargepoint_id", "name"),
+		evccConnected:        prometheus.NewDesc("evcc_connected", "Whether the EVCC is connected, as 0 or 1.", []string{"url"}, nil),
 	}}
 }
 
@@ -52,6 +57,8 @@ func (c *MetricsCollector) Describe(ch chan<- *prometheus.Desc) {
 func (c *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
 	// Each scrape uses one consistent snapshot; absent and removed values emit no series.
 	snapshot := c.state.Snapshot()
+	collectBool(ch, c.descriptors.evccConnected, Field[bool]{Value: appReady.Load(), Set: true}, c.evccURL)
+
 	for id, value := range snapshot.Batteries {
 		collectFloat(ch, c.descriptors.batterySOC, value.SOC, 1, id, fieldString(value.Name))
 	}
@@ -91,7 +98,7 @@ func (c *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
 // descriptorList returns all descriptors owned by this collector.
 func (c *MetricsCollector) descriptorList() []*prometheus.Desc {
 	d := c.descriptors
-	return []*prometheus.Desc{d.batterySOC, d.pvPower, d.pvEnergy, d.consumerPower, d.consumerEnergy, d.gridPower, d.gridEnergy, d.gridCurrent, d.chargePointCharging, d.chargePointConnected, d.chargePointPower, d.chargePointEnergy, d.vehicleSOC, d.vehicleRange, d.vehicleOdometer}
+	return []*prometheus.Desc{d.batterySOC, d.pvPower, d.pvEnergy, d.consumerPower, d.consumerEnergy, d.gridPower, d.gridEnergy, d.gridCurrent, d.chargePointCharging, d.chargePointConnected, d.chargePointPower, d.chargePointEnergy, d.vehicleSOC, d.vehicleRange, d.vehicleOdometer, d.evccConnected}
 }
 
 // collectFloat emits a gauge when its field is present and non-null.

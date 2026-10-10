@@ -43,7 +43,7 @@ All metrics are gauges. Every series includes `source_id` and its entity ID labe
 
 | Metric | Entity label | Meaning |
 | --- | --- | --- |
-| `battery_soc` | `battery_id` | Battery state of charge, percent |
+| `evcc_battery_soc` | `battery_id` | Battery state of charge, percent |
 | `evcc_pv_power_watts` | `pv_id` | PV meter power, W |
 | `evcc_pv_energy_kwh` | `pv_id` | PV meter energy, kWh |
 | `evcc_consumer_power_watts` | `consumer_id` | Consumer meter power, W |
@@ -58,8 +58,10 @@ All metrics are gauges. Every series includes `source_id` and its entity ID labe
 | `evcc_vehicle_soc_percent` | `chargepoint_id` | Vehicle SoC, percent |
 | `evcc_vehicle_range_kilometers` | `chargepoint_id` | Vehicle range, km |
 | `evcc_vehicle_odometer_kilometers` | `chargepoint_id` | Vehicle odometer, km |
+| `evcc_connected` | None | State of the websocket connection to evcc |
 
 Meter IDs use EVCC's stable device `name`; a missing grid meter name uses `grid`. Charge point IDs use the configured loadpoint `name`, falling back to its WebSocket index until the name arrives. Vehicle metrics use the associated charge point ID because EVCC reports vehicle values on loadpoints; the mutable vehicle name is not a label.
+> When renaming a metric you need to restart the exporter.
 
 EVCC list updates replace that entity category: entities omitted from the new list stop being exported, while omitted fields on retained IDs preserve their previous values. A `null` field clears only that value; a `null` entity list clears the category. Vehicle metrics clear when the loadpoint disconnects or its vehicle name is cleared. A `loadpoints.<index>: null` update removes that charge point.
 

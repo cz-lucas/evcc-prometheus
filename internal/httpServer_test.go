@@ -13,7 +13,7 @@ func TestPrometheusHandlerServesMetricsEndpoint(t *testing.T) {
 	store := NewStateStore()
 
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(NewMetricsCollector(store))
+	registry.MustRegister(NewMetricsCollector(store, "ws://localhost/ws"))
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/metrics", nil)
@@ -28,7 +28,7 @@ func TestHealthEndpoint(t *testing.T) {
 	store := NewStateStore()
 
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(NewMetricsCollector(store))
+	registry.MustRegister(NewMetricsCollector(store, "ws://localhost/ws"))
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/health", nil)
@@ -47,7 +47,7 @@ func TestRootEndpoint(t *testing.T) {
 	store := NewStateStore()
 
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(NewMetricsCollector(store))
+	registry.MustRegister(NewMetricsCollector(store, "ws://localhost/ws"))
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -78,7 +78,7 @@ func TestReadyEndpoint(t *testing.T) {
 
 	store := NewStateStore()
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(NewMetricsCollector(store))
+	registry.MustRegister(NewMetricsCollector(store, "ws://localhost/ws"))
 	handler := StartHttpServer(registry)
 
 	for _, test := range tests {
