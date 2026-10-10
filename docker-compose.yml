@@ -1,0 +1,10 @@
+services:
+  prometheus-evcc:
+    image: ghcr.io/cz-lucas/evcc-prometheus:latest
+    ports:
+      - "9070:9070"
+    environment:
+      - EVCC_WS_URL="ws://your.evcc.instance.internal:7070/ws"
+      - LOG_LEVEL=info
+      - GO_METRICS_ENABLED=true
+    restart: unless-stopped
