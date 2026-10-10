@@ -8,8 +8,16 @@ on:
   push:
     branches-ignore:
       - main
+    paths-ignore:
+      - '*.md'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
   pull_request:
     branches: ["main"]
+    paths-ignore:
+      - '*.md'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
   release:
   workflow_dispatch:
 
