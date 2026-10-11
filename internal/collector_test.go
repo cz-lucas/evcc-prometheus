@@ -10,7 +10,8 @@ import (
 func TestMetricsCollectorExportsRoundedMetricsAndRemovesReplacedEntities(t *testing.T) {
 	store := NewStateStore()
 	store.Apply(StateUpdate{
-		Batteries: map[string]BatteryState{"home": {SOC: Field[float64]{Value: 72.56, Set: true}}}, ReplaceBattery: true,
+		HomePower: Field[float64]{Value: 1842.4, Set: true},
+		Batteries: map[string]BatteryState{"home": {SOC: Field[float64]{Value: 72.56, Set: true}, Power: Field[float64]{Value: -650.4, Set: true}, Energy: Field[float64]{Value: 8.765, Set: true}}}, ReplaceBattery: true,
 		PVSystems: map[string]PVState{
 			"roof": {Power: Field[float64]{Value: 1250.6, Set: true}, Energy: Field[float64]{Value: 2.345, Set: true}},
 			"shed": {Power: Field[float64]{Value: 350, Set: true}},
@@ -46,7 +47,9 @@ func TestMetricsCollectorExportsRoundedMetricsAndRemovesReplacedEntities(t *test
 		key  string
 		want float64
 	}{
-		"evcc_battery_soc": {"home", 72.6}, "evcc_pv_power_watts": {"roof", 1251},
+		"evcc_home_power_watts": {"", 1842},
+		"evcc_battery_soc":      {"home", 72.6}, "evcc_pv_power_watts": {"roof", 1251},
+		"evcc_battery_power_watts": {"home", -650}, "evcc_battery_energy_kwh": {"home", 8.77},
 		"evcc_pv_power_watts_shed": {"shed", 350}, "evcc_pv_energy_kwh": {"roof", 2.35},
 		"evcc_consumer_power_watts": {"water", 401}, "evcc_consumer_energy_kwh": {"water", 1.24},
 		"evcc_grid_power_watts": {"main", -121}, "evcc_grid_energy_kwh": {"main", 4.57},

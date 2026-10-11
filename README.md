@@ -52,7 +52,10 @@ All metrics are gauges. Every series includes `source_id` and its entity ID labe
 
 | Metric | Entity label | Meaning |
 | --- | --- | --- |
+| `evcc_home_power_watts` | None | House power consumption, W |
 | `evcc_battery_soc` | `id` | Battery state of charge, percent |
+| `evcc_battery_power_watts` | `id` | Battery power, W |
+| `evcc_battery_energy_kwh` | `id` | Battery energy, kWh |
 | `evcc_pv_power_watts` | `id` | PV meter power, W |
 | `evcc_pv_energy_kwh` | `id` | PV meter energy, kWh |
 | `evcc_consumer_power_watts` | `id` | Consumer meter power, W |
