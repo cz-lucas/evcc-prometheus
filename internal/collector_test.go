@@ -38,7 +38,7 @@ func TestMetricsCollectorExportsRoundedMetricsAndRemovesReplacedEntities(t *test
 			for _, label := range metric.GetLabel() {
 				labels[label.GetName()] = label.GetValue()
 			}
-			key := labels["id"] + labels["id"] + labels["id"] + labels["id"] + labels["id"] + labels["phase"]
+			key := labels["id"] + labels["phase"]
 			values[family.GetName()][key] = metric.GetGauge().GetValue()
 		}
 	}
