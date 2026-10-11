@@ -12,11 +12,11 @@ type MetricsCollector struct {
 	descriptors metricDescriptors
 }
 type metricDescriptors struct {
-	batterySOC, pvPower, pvEnergy, consumerPower, consumerEnergy                   *prometheus.Desc
-	gridPower, gridEnergy, gridCurrent                                             *prometheus.Desc
-	chargePointCharging, chargePointConnected, chargePointPower, chargePointEnergy *prometheus.Desc
-	vehicleSOC, vehicleRange, vehicleOdometer                                      *prometheus.Desc
-	evccConnected                                                                  *prometheus.Desc
+	homePower, batterySOC, batteryPower, batteryEnergy, pvPower, pvEnergy, consumerPower, consumerEnergy *prometheus.Desc
+	gridPower, gridEnergy, gridCurrent                                                                   *prometheus.Desc
+	chargePointCharging, chargePointConnected, chargePointPower, chargePointEnergy                       *prometheus.Desc
+	vehicleSOC, vehicleRange, vehicleOdometer                                                            *prometheus.Desc
+	evccConnected                                                                                        *prometheus.Desc
 }
 
 // NewMetricsCollector creates descriptors and binds collection to a state reader and source ID.
@@ -27,7 +27,10 @@ func NewMetricsCollector(state StateReader, evccURL string) *MetricsCollector {
 		return prometheus.NewDesc(name, help, allLabels, nil)
 	}
 	return &MetricsCollector{state: state, evccURL: evccURL, descriptors: metricDescriptors{
+		homePower:            prometheus.NewDesc("evcc_home_power_watts", "House power consumption in watts.", nil, nil),
 		batterySOC:           entity("evcc_battery_soc", "Battery state of charge in percent.", "id", "name"),
+		batteryPower:         entity("evcc_battery_power_watts", "Battery power in watts.", "id", "name"),
+		batteryEnergy:        entity("evcc_battery_energy_kwh", "Battery energy in kilowatt-hours.", "id", "name"),
 		pvPower:              entity("evcc_pv_power_watts", "PV system power in watts.", "id", "name"),
 		pvEnergy:             entity("evcc_pv_energy_kwh", "PV system energy in kilowatt-hours.", "id", "name"),
 		consumerPower:        entity("evcc_consumer_power_watts", "Consumer power in watts.", "id", "name"),
@@ -58,9 +61,12 @@ func (c *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
 	// Each scrape uses one consistent snapshot; absent and removed values emit no series.
 	snapshot := c.state.Snapshot()
 	collectBool(ch, c.descriptors.evccConnected, Field[bool]{Value: appReady.Load(), Set: true}, c.evccURL)
+	collectFloat(ch, c.descriptors.homePower, snapshot.HomePower, 0)
 
 	for id, value := range snapshot.Batteries {
 		collectFloat(ch, c.descriptors.batterySOC, value.SOC, 1, id, fieldString(value.Name))
+		collectFloat(ch, c.descriptors.batteryPower, value.Power, 0, id, fieldString(value.Name))
+		collectFloat(ch, c.descriptors.batteryEnergy, value.Energy, 2, id, fieldString(value.Name))
 	}
 	for id, value := range snapshot.PVSystems {
 		collectFloat(ch, c.descriptors.pvPower, value.Power, 0, id, fieldString(value.Name))
@@ -98,7 +104,7 @@ func (c *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
 // descriptorList returns all descriptors owned by this collector.
 func (c *MetricsCollector) descriptorList() []*prometheus.Desc {
 	d := c.descriptors
-	return []*prometheus.Desc{d.batterySOC, d.pvPower, d.pvEnergy, d.consumerPower, d.consumerEnergy, d.gridPower, d.gridEnergy, d.gridCurrent, d.chargePointCharging, d.chargePointConnected, d.chargePointPower, d.chargePointEnergy, d.vehicleSOC, d.vehicleRange, d.vehicleOdometer, d.evccConnected}
+	return []*prometheus.Desc{d.homePower, d.batterySOC, d.batteryPower, d.batteryEnergy, d.pvPower, d.pvEnergy, d.consumerPower, d.consumerEnergy, d.gridPower, d.gridEnergy, d.gridCurrent, d.chargePointCharging, d.chargePointConnected, d.chargePointPower, d.chargePointEnergy, d.vehicleSOC, d.vehicleRange, d.vehicleOdometer, d.evccConnected}
 }
 
 // collectFloat emits a gauge when its field is present and non-null.

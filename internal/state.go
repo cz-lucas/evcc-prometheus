@@ -9,8 +9,10 @@ type Field[T any] struct {
 }
 
 type BatteryState struct {
-	Name Field[string]
-	SOC  Field[float64]
+	Name   Field[string]
+	SOC    Field[float64]
+	Power  Field[float64]
+	Energy Field[float64]
 }
 type PVState struct {
 	Name   Field[string]
@@ -41,6 +43,7 @@ type ChargePointState struct {
 }
 
 type StateUpdate struct {
+	HomePower          Field[float64]
 	Batteries          map[string]BatteryState
 	ReplaceBattery     bool
 	PVSystems          map[string]PVState
@@ -54,6 +57,7 @@ type StateUpdate struct {
 }
 
 type Snapshot struct {
+	HomePower    Field[float64]
 	Batteries    map[string]BatteryState
 	PVSystems    map[string]PVState
 	Consumers    map[string]ConsumerState
@@ -65,6 +69,7 @@ type StateReader interface{ Snapshot() Snapshot }
 
 type StateStore struct {
 	mu           sync.RWMutex
+	homePower    Field[float64]
 	batteries    map[string]BatteryState
 	pvSystems    map[string]PVState
 	consumers    map[string]ConsumerState
@@ -85,6 +90,7 @@ func NewStateStore() *StateStore {
 func (s *StateStore) Apply(update StateUpdate) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.homePower = mergeField(s.homePower, update.HomePower)
 	if update.ReplaceBattery {
 		s.batteries = reconcile(s.batteries, update.Batteries, mergeBattery)
 	} else {
@@ -116,6 +122,7 @@ func (s *StateStore) Snapshot() Snapshot {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	snapshot := Snapshot{
+		HomePower: s.homePower,
 		Batteries: cloneMap(s.batteries), PVSystems: cloneMap(s.pvSystems),
 		Consumers: cloneMap(s.consumers), GridMeters: cloneMap(s.gridMeters),
 		ChargePoints: cloneMap(s.chargePoints),
@@ -168,7 +175,10 @@ func mergeField[T any](current, update Field[T]) Field[T] {
 
 // mergeBattery applies only the battery fields present in an update.
 func mergeBattery(current, update BatteryState) BatteryState {
+	current.Name = mergeField(current.Name, update.Name)
 	current.SOC = mergeField(current.SOC, update.SOC)
+	current.Power = mergeField(current.Power, update.Power)
+	current.Energy = mergeField(current.Energy, update.Energy)
 	return current
 }
 

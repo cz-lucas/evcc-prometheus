@@ -5,6 +5,26 @@ import (
 	"testing"
 )
 
+func TestDecoderReadsHomeAndBatteryPowerEnergy(t *testing.T) {
+	decoder, store := NewDecoder(), NewStateStore()
+	update, err := decoder.Decode(`{"homePower":1842,"battery":{"devices":[{"name":"home","title":"Home battery","soc":72,"power":-650,"energy":8.7}]}}`)
+	if err != nil {
+		t.Fatalf("Decode(): %v", err)
+	}
+	store.Apply(update)
+	snapshot := store.Snapshot()
+	if got := snapshot.HomePower; !got.Set || got.Value != 1842 {
+		t.Errorf("home power = %#v, want 1842", got)
+	}
+	battery := snapshot.Batteries["home"]
+	if !battery.Power.Set || battery.Power.Value != -650 {
+		t.Errorf("battery power = %#v, want -650", battery.Power)
+	}
+	if !battery.Energy.Set || battery.Energy.Value != 8.7 {
+		t.Errorf("battery energy = %#v, want 8.7", battery.Energy)
+	}
+}
+
 // TestDecoderPreservesPartialFieldsAndReplacesEntityLists checks patch retention and complete-list removal.
 func TestDecoderPreservesPartialFieldsAndReplacesEntityLists(t *testing.T) {
 	decoder, store := NewDecoder(), NewStateStore()

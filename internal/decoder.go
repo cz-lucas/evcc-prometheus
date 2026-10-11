@@ -26,6 +26,8 @@ func (d *Decoder) Decode(message string) (StateUpdate, error) {
 	for key, raw := range payload {
 		var err error
 		switch key {
+		case "homePower":
+			update.HomePower, err = decodeValue[float64](raw)
 		case "battery":
 			err = decodeBatteries(raw, &update)
 		case "pv":
@@ -69,7 +71,15 @@ func decodeBatteries(raw json.RawMessage, update *StateUpdate) error {
 			return "", BatteryState{}, err
 		}
 		title, err := decodeString(fields, "title")
-		return id, BatteryState{Name: title, SOC: soc}, err
+		power, err := decodeNumber(fields, "power")
+		if err != nil {
+			return "", BatteryState{}, err
+		}
+		energy, err := decodeNumber(fields, "energy")
+		if err != nil {
+			return "", BatteryState{}, err
+		}
+		return id, BatteryState{Name: title, SOC: soc, Power: power, Energy: energy}, err
 	}, &update.Batteries)
 }
 
