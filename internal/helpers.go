@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"strings"
 )
 
 func roundFloat(val float64, precision uint) float64 {
@@ -39,8 +40,26 @@ func EnvOrDefault(key, fallback string) string {
 * I've implemented it without regex because I don't like using more dependencies for such a simple task.
  */
 func UrlValidator(url string) bool {
-	if (len(url) >= 5 && (url[:5] == "ws://" || url[:6] == "wss://")) && len(url) >= 3 && url[len(url)-3:] == "/ws" {
-		return true
+
+	// Do not accecpt urls that contain spaces
+	if strings.Contains(url, " ") {
+		return false
 	}
-	return false
+
+	// Validate scheme
+	if !(strings.HasPrefix(url, "ws://") || strings.HasPrefix(url, "wss://")) {
+		return false
+	}
+
+	url = strings.TrimPrefix(url, "wss://")
+	url = strings.TrimPrefix(url, "ws://")
+
+	// Validate path
+	if !(strings.HasSuffix(url, "/ws")) {
+		return false
+	}
+
+	url = strings.TrimSuffix(url, "/ws")
+
+	return len(url) > 0
 }

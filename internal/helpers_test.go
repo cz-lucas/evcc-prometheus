@@ -124,6 +124,11 @@ func TestUrlValidator(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "valid wss URL with subpath",
+			input:    "wss://example.com/evcc/ws",
+			expected: true,
+		},
+		{
 			name:     "invalid URL missing ws",
 			input:    "ws://example.com",
 			expected: false,
@@ -141,6 +146,41 @@ func TestUrlValidator(t *testing.T) {
 		{
 			name:     "invalid URL missing scheme",
 			input:    "example.com/ws",
+			expected: false,
+		},
+		{
+			name:     "invalid URL scheme only",
+			input:    "ws://",
+			expected: false,
+		},
+		{
+			name:     "invalid URL path only",
+			input:    "/ws",
+			expected: false,
+		},
+		{
+			name:     "invalid path",
+			input:    "/iAmInvalid",
+			expected: false,
+		},
+		{
+			name:     "input less than five characters",
+			input:    "ws:/",
+			expected: false,
+		},
+		{
+			name:     "without host",
+			input:    "wss:///ws",
+			expected: false,
+		},
+		{
+			name:     "host includes spaces",
+			input:    "wss:// I am the host/ws",
+			expected: false,
+		},
+		{
+			name:     "path includes spaces",
+			input:    "ws://hostname/ evcc /ws",
 			expected: false,
 		},
 	}
