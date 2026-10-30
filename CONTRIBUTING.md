@@ -2,7 +2,7 @@
 
 ## Development setup
 
-Install the Go version declared in `go.mod` (currently Go 1.27.1), then run the service from the repository root:
+Install the Go version declared in `go.mod` (currently Go 1.27.3), then run the service from the repository root:
 
 ```sh
 go mod download
